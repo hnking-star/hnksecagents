@@ -4,6 +4,8 @@
 是后续 PTC 机制继续演进的基础入口。
 """
 
+from __future__ import annotations
+
 from typing import Any
 
 import structlog

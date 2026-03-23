@@ -3,6 +3,8 @@
 这一层负责把 runtime 的命令执行能力包装成 agent 可调用工具。
 """
 
+from __future__ import annotations
+
 from typing import Any
 
 import structlog

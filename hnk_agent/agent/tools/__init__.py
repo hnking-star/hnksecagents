@@ -1,5 +1,7 @@
 """Agent 工具层统一导出。"""
 
+from __future__ import annotations
+
 from typing import Any
 
 from langchain_core.tools import BaseTool
