@@ -14,4 +14,5 @@ class ToolSpec:
     description: str = ""
     module_name: str = ""
     callable_name: str = ""
+    source_module: str = ""
     metadata: dict[str, Any] = field(default_factory=dict)

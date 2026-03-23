@@ -15,6 +15,7 @@ import structlog
 from hnk_agent.runtime.base import AgentRuntime
 from hnk_agent.runtime.execution_result import PythonExecutionResult, ShellExecutionResult
 from hnk_agent.runtime.workspace import LocalWorkspace
+from hnk_agent.tooling import ToolModuleBuilder
 
 logger = structlog.get_logger(__name__)
 
@@ -163,8 +164,6 @@ class LocalRuntime(AgentRuntime):
         working_dir: str | None = None,
     ) -> PythonExecutionResult:
         """执行本地 Python 代码。"""
-        del tool_registry
-
         normalized_dir, error = self.workspace.validate_and_normalize_path(working_dir or ".")
         if error:
             return PythonExecutionResult(
@@ -184,8 +183,19 @@ class LocalRuntime(AgentRuntime):
         files_before = await self._list_workspace_files()
         await asyncio.to_thread(code_path.write_text, code, "utf-8")
 
+        if tool_registry is not None:
+            await asyncio.to_thread(
+                ToolModuleBuilder().build_package,
+                tool_registry,
+                self.workspace.tools_dir,
+            )
+
         env = os.environ.copy()
-        python_paths = [normalized_dir]
+        python_paths = [
+            normalized_dir,
+            str(self.workspace.root_dir),
+            str(Path.cwd()),
+        ]
         existing_pythonpath = env.get("PYTHONPATH")
         if existing_pythonpath:
             python_paths.append(existing_pythonpath)
@@ -344,7 +354,7 @@ class LocalRuntime(AgentRuntime):
 
     def _list_workspace_files_sync(self) -> set[str]:
         """同步收集工作区文件列表。"""
-        ignored_dir_names = {"__pycache__", ".git", ".pytest_cache", ".mypy_cache", "code"}
+        ignored_dir_names = {"__pycache__", ".git", ".pytest_cache", ".mypy_cache", "code", "tools"}
         ignored_files = {".DS_Store"}
 
         results: set[str] = set()

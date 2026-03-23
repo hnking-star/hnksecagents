@@ -23,9 +23,37 @@ class ToolRegistry:
 
     def register(self, spec: ToolSpec, implementation: Any | None = None) -> None:
         """注册一个工具定义。"""
+        if implementation is not None:
+            if not spec.callable_name and hasattr(implementation, "__name__"):
+                spec.callable_name = str(implementation.__name__)
+            if not spec.source_module and hasattr(implementation, "__module__"):
+                spec.source_module = str(implementation.__module__)
+
         self._tools[spec.name] = spec
         if implementation is not None:
             self._implementations[spec.name] = implementation
+
+    def register_callable(
+        self,
+        name: str,
+        implementation: Any,
+        *,
+        description: str = "",
+        module_name: str = "",
+        callable_name: str = "",
+        source_module: str = "",
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        """使用可调用对象快速注册工具。"""
+        spec = ToolSpec(
+            name=name,
+            description=description,
+            module_name=module_name,
+            callable_name=callable_name,
+            source_module=source_module,
+            metadata=metadata or {},
+        )
+        self.register(spec, implementation=implementation)
 
     def get(self, name: str) -> ToolSpec | None:
         """获取指定工具定义。"""
