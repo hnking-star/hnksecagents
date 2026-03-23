@@ -5,16 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 import structlog
-from langchain.agents import create_agent
-
-from hnk_agent.agent.backends import LocalBackend
-from hnk_agent.agent.middleware import (
-    BackgroundSubagentMiddleware,
-    BackgroundSubagentOrchestrator,
-    ToolCallCounterMiddleware,
-    create_deepagent_middleware,
-)
-from hnk_agent.agent.subagents import create_subagents_from_names
 from hnk_agent.agent.tools import (
     create_execute_bash_tool,
     create_execute_code_tool,
@@ -122,6 +112,22 @@ class HNKAgent:
         llm: Any | None = None,
     ) -> Any:
         """创建并返回最终可调用的 agent。"""
+        try:
+            from langchain.agents import create_agent
+        except ImportError as exc:  # pragma: no cover
+            raise RuntimeError(
+                "Creating the full HNKAgent requires langchain to be installed"
+            ) from exc
+
+        from hnk_agent.agent.backends import LocalBackend
+        from hnk_agent.agent.middleware import (
+            BackgroundSubagentMiddleware,
+            BackgroundSubagentOrchestrator,
+            ToolCallCounterMiddleware,
+            create_deepagent_middleware,
+        )
+        from hnk_agent.agent.subagents import create_subagents_from_names
+
         model = llm if llm is not None else self.model
         resolved_runtime = runtime or self.runtime
         resolved_tool_registry = tool_registry if tool_registry is not None else self.tool_registry
