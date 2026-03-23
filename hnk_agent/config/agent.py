@@ -132,10 +132,17 @@ class AgentConfig:
         return config
 
     def get_llm_client(self) -> Any:
-        """返回已绑定的模型对象。"""
-        if self.llm_client is None:
-            raise ValueError("LLM client is not configured")
-        return self.llm_client
+        """返回已绑定的模型对象。
+
+        如果当前还没有显式注入 llm_client，
+        会尝试基于 llm_definition 或环境变量懒创建。
+        """
+        if self.llm_client is not None:
+            return self.llm_client
+
+        from hnk_agent.llm import create_llm_from_agent_config
+
+        return create_llm_from_agent_config(self)
 
     def create_runtime(self) -> LocalRuntime:
         """按当前配置创建本地运行时。"""

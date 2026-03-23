@@ -100,7 +100,7 @@ class HNKAgent:
 
         return "\n".join(sections)
 
-    def create_agent(
+    def _build_langgraph_agent_with_background(
         self,
         *,
         runtime: AgentRuntime | None = None,
@@ -112,8 +112,8 @@ class HNKAgent:
         checkpointer: Any | None = None,
         system_prompt_suffix: str | None = None,
         llm: Any | None = None,
-    ) -> Any:
-        """创建并返回最终可调用的 agent。"""
+    ) -> tuple[Any, Any]:
+        """构建 raw LangGraph agent 及其后台中间件。"""
         try:
             from langchain.agents import create_agent
         except ImportError as exc:  # pragma: no cover
@@ -220,6 +220,67 @@ class HNKAgent:
             middleware=deepagent_middleware,
             checkpointer=checkpointer,
         ).with_config({"recursion_limit": self.recursion_limit})
+
+        return agent, background_middleware
+
+    def create_langgraph_agent(
+        self,
+        *,
+        runtime: AgentRuntime | None = None,
+        tool_registry: Any | None = None,
+        subagent_names: list[str] | None = None,
+        additional_subagents: list[dict[str, Any]] | None = None,
+        additional_tools: list[Any] | None = None,
+        background_timeout: float = 300.0,
+        checkpointer: Any | None = None,
+        system_prompt_suffix: str | None = None,
+        llm: Any | None = None,
+    ) -> Any:
+        """创建原生 LangGraph agent。
+
+        这个入口直接返回 langchain.create_agent(...) 生成的 compiled graph，
+        适合给 langgraph dev / Studio 使用，便于直接观察内部图结构与中间件行为。
+        """
+        agent, _ = self._build_langgraph_agent_with_background(
+            runtime=runtime,
+            tool_registry=tool_registry,
+            subagent_names=subagent_names,
+            additional_subagents=additional_subagents,
+            additional_tools=additional_tools,
+            background_timeout=background_timeout,
+            checkpointer=checkpointer,
+            system_prompt_suffix=system_prompt_suffix,
+            llm=llm,
+        )
+        return agent
+
+    def create_agent(
+        self,
+        *,
+        runtime: AgentRuntime | None = None,
+        tool_registry: Any | None = None,
+        subagent_names: list[str] | None = None,
+        additional_subagents: list[dict[str, Any]] | None = None,
+        additional_tools: list[Any] | None = None,
+        background_timeout: float = 300.0,
+        checkpointer: Any | None = None,
+        system_prompt_suffix: str | None = None,
+        llm: Any | None = None,
+    ) -> Any:
+        """创建并返回最终可调用的业务 agent。"""
+        from hnk_agent.agent.middleware import BackgroundSubagentOrchestrator
+
+        agent, background_middleware = self._build_langgraph_agent_with_background(
+            runtime=runtime,
+            tool_registry=tool_registry,
+            subagent_names=subagent_names,
+            additional_subagents=additional_subagents,
+            additional_tools=additional_tools,
+            background_timeout=background_timeout,
+            checkpointer=checkpointer,
+            system_prompt_suffix=system_prompt_suffix,
+            llm=llm,
+        )
 
         return BackgroundSubagentOrchestrator(
             agent=agent,
