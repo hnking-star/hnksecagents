@@ -6,10 +6,8 @@ import asyncio
 import tempfile
 from pathlib import Path
 
+from hnk_agent.config import AgentConfig
 from hnk_agent.agent.tools import create_execute_code_tool
-from hnk_agent.runtime import LocalRuntime
-from hnk_agent.tooling import ToolRegistry
-from hnk_agent.tooling.builtins import register_builtin_tools
 
 
 async def main() -> None:
@@ -18,10 +16,17 @@ async def main() -> None:
         tempfile.mkdtemp(prefix="hnksecagents_demo_", dir="/tmp")
     ).resolve()
 
-    registry = ToolRegistry()
-    register_builtin_tools(registry)
+    # 这里用 object() 作为最小 llm 占位，仅用于演示配置驱动流程。
+    # 当前示例不会真正创建完整 HNKAgent，因此不会使用到这个对象。
+    config = AgentConfig.create(
+        llm=object(),
+        workspace_root=str(workspace_root),
+        enable_builtin_tools=True,
+        subagents_enabled=["general-purpose"],
+    )
 
-    runtime = LocalRuntime(root_dir=workspace_root)
+    registry = config.create_tool_registry()
+    runtime = config.create_runtime()
     execute_code = create_execute_code_tool(runtime, tool_registry=registry)
 
     code = """
@@ -36,6 +41,8 @@ print({"result": result, "message": message})
     output = await execute_code.ainvoke({"code": code})
 
     print("Workspace:", workspace_root)
+    print("Builtin Tools:")
+    print(registry.as_summary())
     print("Execute Code Output:")
     print(output)
 

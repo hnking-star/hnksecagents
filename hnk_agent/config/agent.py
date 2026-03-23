@@ -7,6 +7,9 @@ from pathlib import Path
 from typing import Any
 
 from hnk_agent.config.core import CoreConfig, LoggingConfig, RuntimeConfig, SecurityConfig
+from hnk_agent.runtime import LocalRuntime
+from hnk_agent.tooling import ToolRegistry
+from hnk_agent.tooling.builtins import register_builtin_tools
 
 
 @dataclass
@@ -133,6 +136,23 @@ class AgentConfig:
         if self.llm_client is None:
             raise ValueError("LLM client is not configured")
         return self.llm_client
+
+    def create_runtime(self) -> LocalRuntime:
+        """按当前配置创建本地运行时。"""
+        return LocalRuntime(
+            root_dir=self.runtime.workspace_root,
+            allowed_directories=self.runtime.allowed_directories,
+            enable_path_validation=self.runtime.enable_path_validation,
+            default_timeout=self.runtime.default_timeout,
+            shell_executable=self.runtime.shell_executable,
+        )
+
+    def create_tool_registry(self) -> ToolRegistry:
+        """按当前配置创建工具注册中心。"""
+        registry = ToolRegistry()
+        if self.tooling.enable_builtin_tools:
+            register_builtin_tools(registry)
+        return registry
 
     def to_core_config(self) -> CoreConfig:
         """转换为核心配置。"""
