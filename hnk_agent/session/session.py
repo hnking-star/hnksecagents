@@ -8,9 +8,11 @@ from typing import Any
 import structlog
 
 from hnk_agent.agent import HNKAgent
+from hnk_agent.config import AgentConfig
 from hnk_agent.runtime import LocalRuntime
 from hnk_agent.runtime.base import AgentRuntime
 from hnk_agent.tooling import ToolRegistry
+from hnk_agent.tooling.builtins import register_builtin_tools
 
 logger = structlog.get_logger(__name__)
 
@@ -21,8 +23,9 @@ class Session:
     def __init__(
         self,
         conversation_id: str,
-        model: Any,
+        model: Any | None = None,
         *,
+        config: AgentConfig | None = None,
         runtime: AgentRuntime | None = None,
         tool_registry: ToolRegistry | None = None,
         agent_options: dict[str, Any] | None = None,
@@ -31,6 +34,7 @@ class Session:
         """初始化会话。"""
         self.conversation_id = conversation_id
         self.model = model
+        self.config = config
         self.runtime = runtime
         self.tool_registry = tool_registry
         self.agent_options = agent_options or {}
@@ -50,17 +54,58 @@ class Session:
 
         logger.info("initializing_session", conversation_id=self.conversation_id)
 
+        model = self.model
+        runtime = self.runtime
+        tool_registry = self.tool_registry
+        agent_options = dict(self.agent_options)
+        workspace_root = self.workspace_root
+
+        if self.config is not None:
+            model = self.config.get_llm_client()
+            agent_options = {**self.config.to_agent_options(), **agent_options}
+
+            if workspace_root is None:
+                workspace_root = self.config.runtime.workspace_root
+
+            if runtime is None:
+                runtime = LocalRuntime(
+                    root_dir=workspace_root,
+                    allowed_directories=self.config.runtime.allowed_directories,
+                    enable_path_validation=self.config.runtime.enable_path_validation,
+                    default_timeout=self.config.runtime.default_timeout,
+                    shell_executable=self.config.runtime.shell_executable,
+                )
+
+            if tool_registry is None:
+                tool_registry = ToolRegistry()
+
+            if self.config.tooling.enable_builtin_tools:
+                register_builtin_tools(tool_registry)
+
+        if model is None:
+            raise ValueError("Session requires either a model or an AgentConfig with llm_client")
+
+        if runtime is None:
+            runtime = LocalRuntime(root_dir=workspace_root)
+
+        if tool_registry is None:
+            tool_registry = ToolRegistry()
+
         if self.runtime is None:
-            self.runtime = LocalRuntime(root_dir=self.workspace_root)
+            self.runtime = runtime
+        else:
+            runtime = self.runtime
 
         if self.tool_registry is None:
-            self.tool_registry = ToolRegistry()
+            self.tool_registry = tool_registry
+        else:
+            tool_registry = self.tool_registry
 
         self.agent_builder = HNKAgent(
-            self.model,
-            runtime=self.runtime,
-            tool_registry=self.tool_registry,
-            **self.agent_options,
+            model,
+            runtime=runtime,
+            tool_registry=tool_registry,
+            **agent_options,
         )
         self.agent = self.agent_builder.create_agent()
         self._initialized = True

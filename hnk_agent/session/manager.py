@@ -6,6 +6,7 @@ from typing import Any
 
 import structlog
 
+from hnk_agent.config import AgentConfig
 from hnk_agent.session.session import Session
 
 logger = structlog.get_logger(__name__)
@@ -20,8 +21,9 @@ class SessionManager:
     def get_session(
         cls,
         conversation_id: str,
-        model: Any,
+        model: Any | None = None,
         *,
+        config: AgentConfig | None = None,
         runtime: Any | None = None,
         tool_registry: Any | None = None,
         agent_options: dict[str, Any] | None = None,
@@ -33,6 +35,7 @@ class SessionManager:
             cls._sessions[conversation_id] = Session(
                 conversation_id=conversation_id,
                 model=model,
+                config=config,
                 runtime=runtime,
                 tool_registry=tool_registry,
                 agent_options=agent_options,
