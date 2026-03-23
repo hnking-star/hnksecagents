@@ -5,6 +5,10 @@ from __future__ import annotations
 from typing import Any
 
 import structlog
+from hnk_agent.agent.prompts import (
+    build_general_subagent_system_prompt,
+    build_main_agent_system_prompt,
+)
 from hnk_agent.agent.tools import (
     create_execute_bash_tool,
     create_execute_code_tool,
@@ -82,40 +86,63 @@ class HNKAgent:
         system_prompt_suffix: str | None = None,
     ) -> str:
         """构建主代理系统提示词。"""
-        sections = [
-            "你是 hnk_agent 的主代理。",
-            "你负责在本地运行时中完成任务，并在需要时把复杂子任务委托给后台子代理。",
-            "",
-            "工作原则：",
-            "- 优先直接完成任务",
-            "- 对复杂任务使用 task 进行拆分和并行",
-            "- 后台任务完成后，使用 task_output() 获取结果",
-            "- 文件操作优先使用专门文件工具",
-            "- 复杂逻辑和数据处理优先使用 execute_code",
-            "",
-            "可用工具：",
-            tool_summary,
-            "",
-            "可用子代理：",
-            subagent_summary,
-        ]
+        return build_main_agent_system_prompt(
+            tool_summary=tool_summary,
+            subagent_summary=subagent_summary,
+            registry=self.skill_registry,
+            base_skills_prompt=self.skills_prompt,
+            system_prompt_suffix=system_prompt_suffix,
+        )
 
-        if system_prompt_suffix:
-            sections.extend(["", system_prompt_suffix])
+    def _build_general_subagent_system_prompt(
+        self,
+        *,
+        max_iterations: int,
+        tool_summary: str,
+    ) -> str:
+        """构建通用子代理系统提示词。"""
+        return build_general_subagent_system_prompt(
+            max_iterations=max_iterations,
+            tool_summary=tool_summary,
+            registry=self.skill_registry,
+            base_skills_prompt=self.skills_prompt,
+        )
 
-        if self.skill_registry is not None and not self.skill_registry.is_empty():
-            sections.extend(
-                [
-                    "",
-                    "技能系统：",
-                    "- 系统会按当前请求动态激活匹配技能",
-                    "- 如果本轮注入了技能说明，请优先遵循",
-                ]
+    def _create_main_prompt_builder(
+        self,
+        *,
+        tool_summary: str,
+        subagent_summary: str,
+        system_prompt_suffix: str | None = None,
+    ) -> Any:
+        """创建主代理的统一 prompt builder。"""
+
+        def builder(messages: list[Any]) -> str:
+            _ = messages
+            return self._build_system_prompt(
+                tool_summary=tool_summary,
+                subagent_summary=subagent_summary,
+                system_prompt_suffix=system_prompt_suffix,
             )
-        elif self.skills_prompt:
-            sections.extend(["", self.skills_prompt])
 
-        return "\n".join(sections)
+        return builder
+
+    def _create_general_subagent_prompt_builder(
+        self,
+        *,
+        max_iterations: int,
+        tool_summary: str,
+    ) -> Any:
+        """创建通用子代理的统一 prompt builder。"""
+
+        def builder(messages: list[Any]) -> str:
+            _ = messages
+            return self._build_general_subagent_system_prompt(
+                max_iterations=max_iterations,
+                tool_summary=tool_summary,
+            )
+
+        return builder
 
     def _build_langgraph_agent_with_background(
         self,
@@ -182,19 +209,19 @@ class HNKAgent:
             registry=background_middleware.registry,
         )
 
-        skills_middleware = None
-        if self.skill_registry is not None and not self.skill_registry.is_empty():
-            skills_middleware = create_skills_prompt_middleware(
-                self.skill_registry,
-                fallback_prompt=self._build_system_prompt(
-                    tool_summary="",
-                    subagent_summary="",
-                ),
-            )
-
         selected_subagents = subagent_names or self.subagents_enabled
         tool_names = [getattr(tool, "name", str(tool)) for tool in tools]
         tool_summary = self._build_tool_summary(tool_names)
+
+        subagent_prompt_middleware = None
+        if self.skill_registry is not None and not self.skill_registry.is_empty():
+            subagent_prompt_middleware = create_skills_prompt_middleware(
+                self.skill_registry,
+                prompt_builder=self._create_general_subagent_prompt_builder(
+                    max_iterations=DEFAULT_MAX_GENERAL_ITERATIONS,
+                    tool_summary=tool_summary,
+                ),
+            )
 
         subagents = create_subagents_from_names(
             names=selected_subagents,
@@ -204,8 +231,15 @@ class HNKAgent:
             bash_tool=bash_tool,
             filesystem_tools=filesystem_tools,
             tool_summary=tool_summary,
-            skills_prompt=self.skills_prompt,
-            middleware=[skills_middleware] if skills_middleware is not None else None,
+            system_prompt=self._build_general_subagent_system_prompt(
+                max_iterations=DEFAULT_MAX_GENERAL_ITERATIONS,
+                tool_summary=tool_summary,
+            ),
+            middleware=(
+                [subagent_prompt_middleware]
+                if subagent_prompt_middleware is not None
+                else None
+            ),
         )
 
         if additional_subagents:
@@ -234,8 +268,17 @@ class HNKAgent:
         )
 
         middleware_list: list[Any] = []
-        if skills_middleware is not None:
-            middleware_list.append(skills_middleware)
+        if self.skill_registry is not None and not self.skill_registry.is_empty():
+            middleware_list.append(
+                create_skills_prompt_middleware(
+                    self.skill_registry,
+                    prompt_builder=self._create_main_prompt_builder(
+                        tool_summary=tool_summary,
+                        subagent_summary=subagent_summary,
+                        system_prompt_suffix=system_prompt_suffix,
+                    ),
+                )
+            )
         middleware_list.append(background_middleware)
         deepagent_middleware = create_deepagent_middleware(
             model=model,

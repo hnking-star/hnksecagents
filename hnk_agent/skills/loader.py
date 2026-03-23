@@ -2,9 +2,33 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
+import yaml
+
 from hnk_agent.skills.registry import SkillDocument, SkillRegistry
+
+
+def _parse_frontmatter(content: str) -> dict[str, str]:
+    """解析技能文档顶部的 YAML frontmatter。"""
+    match = re.match(r"^---\s*\n(.*?)\n---\s*\n?", content, re.DOTALL)
+    if not match:
+        return {}
+
+    raw_frontmatter = match.group(1)
+    try:
+        parsed = yaml.safe_load(raw_frontmatter)
+    except yaml.YAMLError:
+        return {}
+
+    if isinstance(parsed, dict):
+        return {
+            str(key): str(value).strip()
+            for key, value in parsed.items()
+            if value is not None
+        }
+    return {}
 
 
 def _infer_description(content: str) -> str:
@@ -13,6 +37,12 @@ def _infer_description(content: str) -> str:
         normalized = line.strip()
         if not normalized:
             continue
+        if normalized == "---":
+            continue
+        if ":" in normalized and not normalized.startswith("#"):
+            key = normalized.split(":", 1)[0].strip().lower()
+            if key in {"name", "description", "license", "compatibility"}:
+                continue
         if normalized.startswith("#"):
             continue
         return normalized[:120]
@@ -37,18 +67,21 @@ def _discover_skill_files(skill_dir: Path) -> list[Path]:
 def _build_skill_document(skill_file: Path, *, source: str) -> SkillDocument:
     """从文件构造技能对象。"""
     content = skill_file.read_text(encoding="utf-8")
+    frontmatter = _parse_frontmatter(content)
 
     if skill_file.name == "SKILL.md" and skill_file.parent.name:
-        skill_name = skill_file.parent.name
+        skill_name = frontmatter.get("name") or skill_file.parent.name
     else:
-        skill_name = skill_file.stem
+        skill_name = frontmatter.get("name") or skill_file.stem
+
+    description = frontmatter.get("description") or _infer_description(content)
 
     return SkillDocument(
         name=skill_name,
         path=skill_file,
         content=content,
         source=source,
-        description=_infer_description(content),
+        description=description,
     )
 
 

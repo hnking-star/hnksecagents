@@ -127,6 +127,45 @@ class SkillRegistry:
 
         return "\n".join(sections).strip()
 
+    def build_catalog_prompt(self) -> str:
+        """构建 ptc-agent 风格的技能目录提示词。
+
+        这里不直接注入技能全文，而是只暴露技能名称、描述和路径，
+        让模型在需要时自行读取对应的 SKILL.md。
+        """
+        if self.is_empty():
+            return ""
+
+        sections = [
+            "技能系统：",
+            "你可以使用本地技能库来获得特定领域的工作流和规则。",
+            "",
+            "可用技能目录：",
+        ]
+
+        for skill in self.skills:
+            description = skill.description or "（未提供描述）"
+            sections.append(f"- {skill.name}: {description}")
+            sections.append(f"  -> 阅读 {skill.path} 获取完整说明")
+
+        sections.extend(
+            [
+                "",
+                "使用方式（渐进披露）：",
+                "1. 先根据用户任务判断是否有相关技能。",
+                "2. 如果相关，再使用文件工具读取对应路径的 SKILL.md 全文。",
+                "3. 按技能中的步骤、约束和示例执行。",
+                "4. 如果需要额外参考文件，也使用技能目录中的绝对路径继续读取。",
+                "",
+                "注意：",
+                "- 不要一开始就读取所有技能全文。",
+                "- 只在任务明显相关时读取对应技能。",
+                "- 多个技能都相关时，可以组合使用，但保持最小必要集合。",
+            ]
+        )
+
+        return "\n".join(sections).strip()
+
     def build_prompt_for_query(self, query: str, *, limit: int = 3) -> str:
         """按查询文本只渲染命中的技能 prompt。"""
         matched = self.match(query, limit=limit)
@@ -138,5 +177,5 @@ class SkillRegistry:
             return ""
         return (
             "技能系统：当前项目已加载本地技能。"
-            "当系统在本轮注入匹配技能后，优先遵循对应技能说明。"
+            "你会先看到技能目录；当任务匹配某个技能时，再读取对应的 SKILL.md 全文。"
         )

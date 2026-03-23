@@ -6,6 +6,7 @@
 
 from typing import Any
 
+from hnk_agent.agent.prompts import build_general_subagent_prompt
 
 def _build_general_system_prompt(
     max_iterations: int,
@@ -13,32 +14,11 @@ def _build_general_system_prompt(
     skills_prompt: str = "",
 ) -> str:
     """构建通用子代理的默认系统提示词。"""
-    lines = [
-        "你是一个通用子代理，负责接收主代理分派的具体任务。",
-        "你的目标是独立完成被分配的子任务，并把结果清晰返回给主代理。",
-        "",
-        "工作要求：",
-        f"- 最多进行 {max_iterations} 轮关键操作",
-        "- 优先直接完成任务，不要写无意义的铺垫",
-        "- 如果有工具可用，优先利用工具完成任务",
-        "- 如果任务需要读取、修改、搜索文件，可以使用文件相关工具",
-        "- 如果任务需要执行代码，请通过 execute_code 类工具完成",
-        "- 输出结果时尽量给出结论、关键依据和必要的下一步建议",
-    ]
-
-    if tool_summary:
-        lines.extend(
-            [
-                "",
-                "可用工具摘要：",
-                tool_summary,
-            ]
-        )
-
-    if skills_prompt:
-        lines.extend(["", skills_prompt])
-
-    return "\n".join(lines)
+    return build_general_subagent_prompt(
+        max_iterations=max_iterations,
+        tool_summary=tool_summary,
+        skills_prompt=skills_prompt,
+    )
 
 
 def _tool_identity(tool: Any) -> str:
