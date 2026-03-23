@@ -33,6 +33,7 @@ class HNKAgent:
         use_filesystem_tools: bool = True,
         background_auto_wait: bool = False,
         recursion_limit: int = 1000,
+        skills_prompt: str | None = None,
     ) -> None:
         """初始化 HNKAgent。"""
         self.model = model
@@ -42,6 +43,7 @@ class HNKAgent:
         self.use_filesystem_tools = use_filesystem_tools
         self.background_auto_wait = background_auto_wait
         self.recursion_limit = recursion_limit
+        self.skills_prompt = skills_prompt or ""
 
         self.subagents: dict[str, Any] = {}
         self.native_tools: list[str] = []
@@ -97,6 +99,9 @@ class HNKAgent:
 
         if system_prompt_suffix:
             sections.extend(["", system_prompt_suffix])
+
+        if self.skills_prompt:
+            sections.extend(["", self.skills_prompt])
 
         return "\n".join(sections)
 
@@ -177,6 +182,7 @@ class HNKAgent:
             bash_tool=bash_tool,
             filesystem_tools=filesystem_tools,
             tool_summary=tool_summary,
+            skills_prompt=self.skills_prompt,
         )
 
         if additional_subagents:

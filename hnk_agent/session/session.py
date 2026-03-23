@@ -11,6 +11,7 @@ from hnk_agent.agent import HNKAgent
 from hnk_agent.config import AgentConfig
 from hnk_agent.runtime import LocalRuntime
 from hnk_agent.runtime.base import AgentRuntime
+from hnk_agent.skills import load_skills_from_dirs
 from hnk_agent.tooling import ToolRegistry
 from hnk_agent.tooling.builtins import register_builtin_tools
 
@@ -81,6 +82,15 @@ class Session:
 
             if self.config.tooling.enable_builtin_tools:
                 register_builtin_tools(tool_registry)
+
+            if self.config.skills.enabled and "skills_prompt" not in agent_options:
+                skill_dirs = self.config.skills.local_skill_dirs(
+                    cwd=Path(workspace_root or "."),
+                )
+                skill_registry = load_skills_from_dirs(skill_dirs)
+                skills_prompt = skill_registry.build_prompt()
+                if skills_prompt:
+                    agent_options["skills_prompt"] = skills_prompt
 
         if model is None:
             raise ValueError("Session requires either a model or an AgentConfig with llm_client")
