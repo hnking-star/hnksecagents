@@ -14,6 +14,7 @@ from hnk_agent.agent.tools import (
 )
 from hnk_agent.runtime import LocalRuntime
 from hnk_agent.runtime.base import AgentRuntime
+from hnk_agent.skills.registry import SkillRegistry
 
 logger = structlog.get_logger(__name__)
 
@@ -34,6 +35,7 @@ class HNKAgent:
         background_auto_wait: bool = False,
         recursion_limit: int = 1000,
         skills_prompt: str | None = None,
+        skill_registry: SkillRegistry | None = None,
     ) -> None:
         """初始化 HNKAgent。"""
         self.model = model
@@ -44,6 +46,7 @@ class HNKAgent:
         self.background_auto_wait = background_auto_wait
         self.recursion_limit = recursion_limit
         self.skills_prompt = skills_prompt or ""
+        self.skill_registry = skill_registry
 
         self.subagents: dict[str, Any] = {}
         self.native_tools: list[str] = []
@@ -100,7 +103,16 @@ class HNKAgent:
         if system_prompt_suffix:
             sections.extend(["", system_prompt_suffix])
 
-        if self.skills_prompt:
+        if self.skill_registry is not None and not self.skill_registry.is_empty():
+            sections.extend(
+                [
+                    "",
+                    "技能系统：",
+                    "- 系统会按当前请求动态激活匹配技能",
+                    "- 如果本轮注入了技能说明，请优先遵循",
+                ]
+            )
+        elif self.skills_prompt:
             sections.extend(["", self.skills_prompt])
 
         return "\n".join(sections)
@@ -129,11 +141,11 @@ class HNKAgent:
         from hnk_agent.agent.backends import LocalBackend
         from hnk_agent.agent.middleware import (
             BackgroundSubagentMiddleware,
-            BackgroundSubagentOrchestrator,
             ToolCallCounterMiddleware,
             create_deepagent_middleware,
         )
         from hnk_agent.agent.subagents import create_subagents_from_names
+        from hnk_agent.skills import create_skills_prompt_middleware
 
         model = llm if llm is not None else self.model
         resolved_runtime = runtime or self.runtime
@@ -170,6 +182,16 @@ class HNKAgent:
             registry=background_middleware.registry,
         )
 
+        skills_middleware = None
+        if self.skill_registry is not None and not self.skill_registry.is_empty():
+            skills_middleware = create_skills_prompt_middleware(
+                self.skill_registry,
+                fallback_prompt=self._build_system_prompt(
+                    tool_summary="",
+                    subagent_summary="",
+                ),
+            )
+
         selected_subagents = subagent_names or self.subagents_enabled
         tool_names = [getattr(tool, "name", str(tool)) for tool in tools]
         tool_summary = self._build_tool_summary(tool_names)
@@ -183,6 +205,7 @@ class HNKAgent:
             filesystem_tools=filesystem_tools,
             tool_summary=tool_summary,
             skills_prompt=self.skills_prompt,
+            middleware=[skills_middleware] if skills_middleware is not None else None,
         )
 
         if additional_subagents:
@@ -210,7 +233,10 @@ class HNKAgent:
             system_prompt_suffix=system_prompt_suffix,
         )
 
-        middleware_list: list[Any] = [background_middleware]
+        middleware_list: list[Any] = []
+        if skills_middleware is not None:
+            middleware_list.append(skills_middleware)
+        middleware_list.append(background_middleware)
         deepagent_middleware = create_deepagent_middleware(
             model=model,
             tools=tools,

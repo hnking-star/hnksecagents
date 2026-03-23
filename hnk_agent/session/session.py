@@ -88,9 +88,9 @@ class Session:
                     cwd=Path(workspace_root or "."),
                 )
                 skill_registry = load_skills_from_dirs(skill_dirs)
-                skills_prompt = skill_registry.build_prompt()
-                if skills_prompt:
-                    agent_options["skills_prompt"] = skills_prompt
+                if not skill_registry.is_empty():
+                    agent_options["skill_registry"] = skill_registry
+                    agent_options["skills_prompt"] = skill_registry.build_guidance_prompt()
 
         if model is None:
             raise ValueError("Session requires either a model or an AgentConfig with llm_client")
