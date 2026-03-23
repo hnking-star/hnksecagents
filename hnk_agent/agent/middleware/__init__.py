@@ -1,5 +1,7 @@
 """Agent 中间件统一导出。"""
 
+from __future__ import annotations
+
 from hnk_agent.agent.middleware.background import (
     BackgroundSubagentMiddleware,
     BackgroundSubagentOrchestrator,
@@ -11,7 +13,6 @@ from hnk_agent.agent.middleware.background import (
     current_background_task_id,
     extract_result_content,
 )
-from hnk_agent.agent.middleware.deepagent_middleware import create_deepagent_middleware
 
 __all__ = [
     "BackgroundSubagentMiddleware",
@@ -25,3 +26,12 @@ __all__ = [
     "current_background_task_id",
     "create_deepagent_middleware",
 ]
+
+
+def __getattr__(name: str):
+    """按需导入重依赖模块。"""
+    if name == "create_deepagent_middleware":
+        from hnk_agent.agent.middleware.deepagent_middleware import create_deepagent_middleware
+
+        return create_deepagent_middleware
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

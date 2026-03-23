@@ -4,6 +4,8 @@
 把子代理的工具调用次数和当前工具名回写到后台任务注册中心。
 """
 
+from __future__ import annotations
+
 from collections.abc import Awaitable, Callable
 
 import structlog

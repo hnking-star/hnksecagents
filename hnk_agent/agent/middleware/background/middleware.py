@@ -4,6 +4,8 @@
 把原本会阻塞当前轮次的子代理执行改成后台任务。
 """
 
+from __future__ import annotations
+
 import asyncio
 import contextvars
 from collections.abc import Awaitable, Callable

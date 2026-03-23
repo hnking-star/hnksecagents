@@ -3,6 +3,8 @@
 这个模块负责包装最终 agent，并在后台任务完成后决定是否通知主代理重入。
 """
 
+from __future__ import annotations
+
 from collections.abc import AsyncIterator
 from typing import Any
 

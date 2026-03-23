@@ -4,6 +4,8 @@
 是 `task / wait / task_output` 机制的状态核心。
 """
 
+from __future__ import annotations
+
 import asyncio
 import time
 from dataclasses import dataclass, field
