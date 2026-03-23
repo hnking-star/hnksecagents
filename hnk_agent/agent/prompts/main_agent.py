@@ -7,8 +7,6 @@ def build_main_agent_prompt(
     *,
     tool_summary: str,
     subagent_summary: str,
-    skills_enabled: bool = False,
-    skills_prompt: str = "",
     system_prompt_suffix: str | None = None,
 ) -> str:
     """构建主代理系统提示词。"""
@@ -35,19 +33,6 @@ def build_main_agent_prompt(
         "可用子代理：",
         subagent_summary,
     ]
-
-    if skills_enabled:
-        sections.extend(
-            [
-                "",
-                "技能系统：",
-                "- 系统会按当前请求动态激活匹配技能",
-                "- 如果本轮注入了技能说明，请优先遵循",
-            ]
-        )
-
-    if skills_prompt:
-        sections.extend(["", skills_prompt])
 
     if system_prompt_suffix:
         sections.extend(["", system_prompt_suffix])

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
+from pathlib import Path
 
 import structlog
 from hnk_agent.agent.prompts import (
@@ -18,7 +19,6 @@ from hnk_agent.agent.tools import (
 )
 from hnk_agent.runtime import LocalRuntime
 from hnk_agent.runtime.base import AgentRuntime
-from hnk_agent.skills.registry import SkillRegistry
 
 logger = structlog.get_logger(__name__)
 
@@ -38,8 +38,7 @@ class HNKAgent:
         use_filesystem_tools: bool = True,
         background_auto_wait: bool = False,
         recursion_limit: int = 1000,
-        skills_prompt: str | None = None,
-        skill_registry: SkillRegistry | None = None,
+        skill_sources: list[str] | None = None,
     ) -> None:
         """初始化 HNKAgent。"""
         self.model = model
@@ -49,8 +48,13 @@ class HNKAgent:
         self.use_filesystem_tools = use_filesystem_tools
         self.background_auto_wait = background_auto_wait
         self.recursion_limit = recursion_limit
-        self.skills_prompt = skills_prompt or ""
-        self.skill_registry = skill_registry
+        self.skill_sources = list(skill_sources or [])
+
+        if isinstance(self.runtime, LocalRuntime):
+            for skill_source in self.skill_sources:
+                resolved = Path(skill_source).expanduser().resolve()
+                if resolved not in self.runtime.workspace.allowed_directories:
+                    self.runtime.workspace.allowed_directories.append(resolved)
 
         self.subagents: dict[str, Any] = {}
         self.native_tools: list[str] = []
@@ -89,8 +93,6 @@ class HNKAgent:
         return build_main_agent_system_prompt(
             tool_summary=tool_summary,
             subagent_summary=subagent_summary,
-            registry=self.skill_registry,
-            base_skills_prompt=self.skills_prompt,
             system_prompt_suffix=system_prompt_suffix,
         )
 
@@ -104,45 +106,7 @@ class HNKAgent:
         return build_general_subagent_system_prompt(
             max_iterations=max_iterations,
             tool_summary=tool_summary,
-            registry=self.skill_registry,
-            base_skills_prompt=self.skills_prompt,
         )
-
-    def _create_main_prompt_builder(
-        self,
-        *,
-        tool_summary: str,
-        subagent_summary: str,
-        system_prompt_suffix: str | None = None,
-    ) -> Any:
-        """创建主代理的统一 prompt builder。"""
-
-        def builder(messages: list[Any]) -> str:
-            _ = messages
-            return self._build_system_prompt(
-                tool_summary=tool_summary,
-                subagent_summary=subagent_summary,
-                system_prompt_suffix=system_prompt_suffix,
-            )
-
-        return builder
-
-    def _create_general_subagent_prompt_builder(
-        self,
-        *,
-        max_iterations: int,
-        tool_summary: str,
-    ) -> Any:
-        """创建通用子代理的统一 prompt builder。"""
-
-        def builder(messages: list[Any]) -> str:
-            _ = messages
-            return self._build_general_subagent_system_prompt(
-                max_iterations=max_iterations,
-                tool_summary=tool_summary,
-            )
-
-        return builder
 
     def _build_langgraph_agent_with_background(
         self,
@@ -172,7 +136,6 @@ class HNKAgent:
             create_deepagent_middleware,
         )
         from hnk_agent.agent.subagents import create_subagents_from_names
-        from hnk_agent.skills import create_skills_prompt_middleware
 
         model = llm if llm is not None else self.model
         resolved_runtime = runtime or self.runtime
@@ -213,16 +176,6 @@ class HNKAgent:
         tool_names = [getattr(tool, "name", str(tool)) for tool in tools]
         tool_summary = self._build_tool_summary(tool_names)
 
-        subagent_prompt_middleware = None
-        if self.skill_registry is not None and not self.skill_registry.is_empty():
-            subagent_prompt_middleware = create_skills_prompt_middleware(
-                self.skill_registry,
-                prompt_builder=self._create_general_subagent_prompt_builder(
-                    max_iterations=DEFAULT_MAX_GENERAL_ITERATIONS,
-                    tool_summary=tool_summary,
-                ),
-            )
-
         subagents = create_subagents_from_names(
             names=selected_subagents,
             counter_middleware=counter_middleware,
@@ -234,11 +187,6 @@ class HNKAgent:
             system_prompt=self._build_general_subagent_system_prompt(
                 max_iterations=DEFAULT_MAX_GENERAL_ITERATIONS,
                 tool_summary=tool_summary,
-            ),
-            middleware=(
-                [subagent_prompt_middleware]
-                if subagent_prompt_middleware is not None
-                else None
             ),
         )
 
@@ -267,24 +215,13 @@ class HNKAgent:
             system_prompt_suffix=system_prompt_suffix,
         )
 
-        middleware_list: list[Any] = []
-        if self.skill_registry is not None and not self.skill_registry.is_empty():
-            middleware_list.append(
-                create_skills_prompt_middleware(
-                    self.skill_registry,
-                    prompt_builder=self._create_main_prompt_builder(
-                        tool_summary=tool_summary,
-                        subagent_summary=subagent_summary,
-                        system_prompt_suffix=system_prompt_suffix,
-                    ),
-                )
-            )
-        middleware_list.append(background_middleware)
+        middleware_list: list[Any] = [background_middleware]
         deepagent_middleware = create_deepagent_middleware(
             model=model,
             tools=tools,
             subagents=subagents,
             backend=backend,
+            skill_sources=self.skill_sources,
             custom_middleware=middleware_list,
         )
 

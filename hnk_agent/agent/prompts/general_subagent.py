@@ -7,8 +7,6 @@ def build_general_subagent_prompt(
     *,
     max_iterations: int,
     tool_summary: str = "",
-    skills_enabled: bool = False,
-    skills_prompt: str = "",
 ) -> str:
     """构建通用子代理的系统提示词。"""
     sections = [
@@ -27,18 +25,5 @@ def build_general_subagent_prompt(
 
     if tool_summary:
         sections.extend(["", "可用工具摘要：", tool_summary])
-
-    if skills_enabled:
-        sections.extend(
-            [
-                "",
-                "技能系统：",
-                "- 系统会按当前任务动态选择相关技能",
-                "- 如果本轮已注入技能规则，优先遵循对应技能说明",
-            ]
-        )
-
-    if skills_prompt:
-        sections.extend(["", skills_prompt])
 
     return "\n".join(sections)

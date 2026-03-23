@@ -12,7 +12,6 @@ from hnk_agent.agent import HNKAgent
 from hnk_agent.config import AgentConfig
 from hnk_agent.runtime import LocalRuntime
 from hnk_agent.runtime.base import AgentRuntime
-from hnk_agent.skills import load_skills_from_dirs
 from hnk_agent.tooling import ToolRegistry
 from hnk_agent.tooling.builtins import register_builtin_tools
 
@@ -69,10 +68,21 @@ class Session:
             if workspace_root is None:
                 workspace_root = self.config.runtime.workspace_root
 
+            skill_dirs: list[str] = []
+            if self.config.skills.enabled:
+                skill_dirs = self.config.skills.local_skill_dirs(
+                    cwd=Path(workspace_root or "."),
+                )
+
             if runtime is None:
+                allowed_directories = list(self.config.runtime.allowed_directories)
+                for skill_dir in skill_dirs:
+                    if skill_dir not in allowed_directories:
+                        allowed_directories.append(skill_dir)
+
                 runtime = LocalRuntime(
                     root_dir=workspace_root,
-                    allowed_directories=self.config.runtime.allowed_directories,
+                    allowed_directories=allowed_directories,
                     enable_path_validation=self.config.runtime.enable_path_validation,
                     default_timeout=self.config.runtime.default_timeout,
                     shell_executable=self.config.runtime.shell_executable,
@@ -84,20 +94,22 @@ class Session:
             if self.config.tooling.enable_builtin_tools:
                 register_builtin_tools(tool_registry)
 
-            if self.config.skills.enabled and "skills_prompt" not in agent_options:
-                skill_dirs = self.config.skills.local_skill_dirs(
-                    cwd=Path(workspace_root or "."),
-                )
-                skill_registry = load_skills_from_dirs(skill_dirs)
-                if not skill_registry.is_empty():
-                    agent_options["skill_registry"] = skill_registry
-                    agent_options["skills_prompt"] = skill_registry.build_guidance_prompt()
+            if self.config.skills.enabled and "skill_sources" not in agent_options:
+                agent_options["skill_sources"] = skill_dirs
 
         if model is None:
             raise ValueError("Session requires either a model or an AgentConfig with llm_client")
 
         if runtime is None:
             runtime = LocalRuntime(root_dir=workspace_root)
+        elif isinstance(runtime, LocalRuntime) and self.config is not None and self.config.skills.enabled:
+            skill_dirs = self.config.skills.local_skill_dirs(
+                cwd=Path(workspace_root or "."),
+            )
+            for skill_dir in skill_dirs:
+                resolved = Path(skill_dir).expanduser().resolve()
+                if resolved not in runtime.workspace.allowed_directories:
+                    runtime.workspace.allowed_directories.append(resolved)
 
         if tool_registry is None:
             tool_registry = ToolRegistry()

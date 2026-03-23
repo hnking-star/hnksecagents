@@ -18,7 +18,7 @@ class SkillsConfig:
 
     enabled: bool = True
     user_skills_dir: str = "~/.hnksecagents/skills"
-    project_skills_dir: str = ".hnk_agent/skills"
+    project_skills_dir: str = "skills"
 
     def local_skill_dirs(self, *, cwd: Path | None = None) -> list[str]:
         """返回本地技能目录列表。"""
@@ -108,7 +108,7 @@ class AgentConfig:
         skills = SkillsConfig(
             enabled=kwargs.pop("skills_enabled", True),
             user_skills_dir=kwargs.pop("user_skills_dir", "~/.hnksecagents/skills"),
-            project_skills_dir=kwargs.pop("project_skills_dir", ".hnk_agent/skills"),
+            project_skills_dir=kwargs.pop("project_skills_dir", "skills"),
         )
 
         tooling = ToolingConfig(

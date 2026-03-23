@@ -89,7 +89,7 @@ def load_from_dict(
         skills=SkillsConfig(
             enabled=bool(skills_data.get("enabled", True)),
             user_skills_dir=str(skills_data.get("user_skills_dir", "~/.hnksecagents/skills")),
-            project_skills_dir=str(skills_data.get("project_skills_dir", ".hnk_agent/skills")),
+            project_skills_dir=str(skills_data.get("project_skills_dir", "skills")),
         ),
         tooling=ToolingConfig(
             enable_builtin_tools=bool(tooling_data.get("enable_builtin_tools", True)),

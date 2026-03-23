@@ -55,12 +55,14 @@ def _build_agent() -> Any:
 
     runtime = config.create_runtime()
     tool_registry = config.create_tool_registry()
+    skill_sources = config.skills.local_skill_dirs(cwd=Path(workspace_root))
 
     builder = HNKAgent(
         model,
         runtime=runtime,
         tool_registry=tool_registry,
         **config.to_agent_options(),
+        skill_sources=skill_sources,
     )
     return builder.create_langgraph_agent()
 

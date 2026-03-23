@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import fnmatch
 import re
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -55,6 +56,34 @@ class LocalBackend:
             for line_number, line in enumerate(lines, start=start_line_number)
         )
 
+    def _run_sync(self, coroutine: Any) -> Any:
+        """在同步接口里执行协程。
+
+        如果当前线程没有事件循环，直接 asyncio.run。
+        如果已经处于事件循环中，则切到新线程执行，避免嵌套事件循环报错。
+        """
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(coroutine)
+
+        result: dict[str, Any] = {}
+        error: dict[str, BaseException] = {}
+
+        def _runner() -> None:
+            try:
+                result["value"] = asyncio.run(coroutine)
+            except BaseException as exc:  # noqa: BLE001
+                error["value"] = exc
+
+        thread = threading.Thread(target=_runner, daemon=True)
+        thread.start()
+        thread.join()
+
+        if "value" in error:
+            raise error["value"]
+        return result.get("value")
+
     def _path_for_output(self, path: str) -> str:
         """把真实路径转换成返回给上层的展示路径。"""
         return self.runtime.virtualize_path(path) if self.virtual_mode else path
@@ -64,16 +93,16 @@ class LocalBackend:
     # ------------------------------------------------------------------
 
     def ls_info(self, path: str = ".") -> list[dict]:  # pragma: no cover
-        """同步目录列表接口，当前不支持。"""
-        raise RuntimeError("LocalBackend is async-native; use als_info()")
+        """同步目录列表接口。"""
+        return self._run_sync(self.als_info(path))
 
     def read(self, file_path: str, offset: int = 0, limit: int = 2000) -> str:  # pragma: no cover
-        """同步文件读取接口，当前不支持。"""
-        raise RuntimeError("LocalBackend is async-native; use aread()")
+        """同步文件读取接口。"""
+        return self._run_sync(self.aread(file_path, offset, limit))
 
     def write(self, file_path: str, content: str) -> WriteResult:  # pragma: no cover
-        """同步文件写入接口，当前不支持。"""
-        raise RuntimeError("LocalBackend is async-native; use awrite()")
+        """同步文件写入接口。"""
+        return self._run_sync(self.awrite(file_path, content))
 
     def edit(
         self,
@@ -83,28 +112,35 @@ class LocalBackend:
         *,
         replace_all: bool = False,
     ) -> EditResult:  # pragma: no cover
-        """同步文件编辑接口，当前不支持。"""
-        raise RuntimeError("LocalBackend is async-native; use aedit()")
+        """同步文件编辑接口。"""
+        return self._run_sync(
+            self.aedit(
+                file_path,
+                old_string,
+                new_string,
+                replace_all=replace_all,
+            )
+        )
 
     def grep_raw(self, pattern: str, path: str | None = None, glob: str | None = None) -> list[dict] | str:  # pragma: no cover
-        """同步 grep 接口，当前不支持。"""
-        raise RuntimeError("LocalBackend is async-native; use agrep_raw()")
+        """同步 grep 接口。"""
+        return self._run_sync(self.agrep_raw(pattern, path=path, glob=glob))
 
     def glob_info(self, pattern: str, path: str = "/") -> list[dict]:  # pragma: no cover
-        """同步 glob 接口，当前不支持。"""
-        raise RuntimeError("LocalBackend is async-native; use aglob_info()")
+        """同步 glob 接口。"""
+        return self._run_sync(self.aglob_info(pattern, path))
 
     def upload_files(self, files: list[tuple[str, bytes]]) -> list[FileUploadResponse]:  # pragma: no cover
-        """同步上传接口，当前不支持。"""
-        raise RuntimeError("LocalBackend is async-native; use aupload_files()")
+        """同步上传接口。"""
+        return self._run_sync(self.aupload_files(files))
 
     def download_files(self, paths: list[str]) -> list[FileDownloadResponse]:  # pragma: no cover
-        """同步下载接口，当前不支持。"""
-        raise RuntimeError("LocalBackend is async-native; use adownload_files()")
+        """同步下载接口。"""
+        return self._run_sync(self.adownload_files(paths))
 
     def execute(self, command: str) -> ExecuteResponse:  # pragma: no cover
-        """同步命令执行接口，当前不支持。"""
-        raise RuntimeError("LocalBackend is async-native; use aexecute()")
+        """同步命令执行接口。"""
+        return self._run_sync(self.aexecute(command))
 
     # ------------------------------------------------------------------
     # 异步接口

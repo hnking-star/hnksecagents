@@ -26,7 +26,6 @@ SUBAGENT_PARAMS: dict[str, dict[str, list[str]]] = {
             "vision_tools",
             "middleware",
             "tool_summary",
-            "skills_prompt",
             "system_prompt",
             "description",
         ],

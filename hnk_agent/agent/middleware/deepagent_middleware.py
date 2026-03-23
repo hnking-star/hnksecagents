@@ -21,6 +21,7 @@ def create_deepagent_middleware(
     tools: list[Any],
     subagents: list[Any],
     backend: Any,
+    skill_sources: list[str] | None = None,
     custom_middleware: list[Any] | None = None,
     max_tokens_before_summary: int = 170000,
     messages_to_keep: int = 6,
@@ -36,8 +37,24 @@ def create_deepagent_middleware(
             "Creating the full HNKAgent middleware stack requires deepagents and langchain dependencies"
         ) from exc
 
+    skills_middleware: list[Any] = []
+    resolved_sources = [source for source in (skill_sources or []) if str(source).strip()]
+    if resolved_sources:
+        try:
+            from deepagents.middleware.skills import SkillsMiddleware as DeepagentsSkillsMiddleware
+        except ImportError as exc:  # pragma: no cover
+            raise RuntimeError("Skills are enabled but deepagents SkillsMiddleware is unavailable") from exc
+
+        skills_middleware = [
+            DeepagentsSkillsMiddleware(
+                backend=backend,
+                sources=resolved_sources,
+            )
+        ]
+
     middleware: list[Any] = [
         TodoListMiddleware(),
+        *skills_middleware,
         FilesystemMiddleware(backend=backend),
         SubAgentMiddleware(
             default_model=model,
@@ -47,6 +64,7 @@ def create_deepagent_middleware(
             system_prompt=None,
             default_middleware=[
                 TodoListMiddleware(),
+                *skills_middleware,
                 FilesystemMiddleware(backend=backend),
                 SummarizationMiddleware(
                     model=model,

@@ -1,0 +1,7 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "hnksecagents": "hnk_agent/agent/langgraph_entry.py:agent"
+  },
+  "env": ".env"
+}

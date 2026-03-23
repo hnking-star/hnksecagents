@@ -11,13 +11,11 @@ from hnk_agent.agent.prompts import build_general_subagent_prompt
 def _build_general_system_prompt(
     max_iterations: int,
     tool_summary: str = "",
-    skills_prompt: str = "",
 ) -> str:
     """构建通用子代理的默认系统提示词。"""
     return build_general_subagent_prompt(
         max_iterations=max_iterations,
         tool_summary=tool_summary,
-        skills_prompt=skills_prompt,
     )
 
 
@@ -55,7 +53,6 @@ def get_general_subagent_config(
     vision_tools: list[Any] | None = None,
     middleware: list[Any] | None = None,
     tool_summary: str = "",
-    skills_prompt: str = "",
     system_prompt: str | None = None,
     description: str | None = None,
 ) -> dict[str, Any]:
@@ -78,7 +75,6 @@ def get_general_subagent_config(
     final_system_prompt = system_prompt or _build_general_system_prompt(
         max_iterations=max_iterations,
         tool_summary=tool_summary,
-        skills_prompt=skills_prompt,
     )
 
     final_description = description or (
@@ -108,7 +104,6 @@ def create_general_subagent(
     vision_tools: list[Any] | None = None,
     middleware: list[Any] | None = None,
     tool_summary: str = "",
-    skills_prompt: str = "",
     system_prompt: str | None = None,
     description: str | None = None,
 ) -> dict[str, Any]:
@@ -122,7 +117,6 @@ def create_general_subagent(
         vision_tools=vision_tools,
         middleware=middleware,
         tool_summary=tool_summary,
-        skills_prompt=skills_prompt,
         system_prompt=system_prompt,
         description=description,
     )
