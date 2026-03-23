@@ -9,6 +9,8 @@ from hnk_agent.agent.tools import (
     create_execute_bash_tool,
     create_execute_code_tool,
     create_filesystem_tools,
+    create_glob_tool,
+    create_grep_tool,
 )
 from hnk_agent.runtime import LocalRuntime
 from hnk_agent.runtime.base import AgentRuntime
@@ -143,7 +145,9 @@ class HNKAgent:
         filesystem_tools: list[Any] = []
         if self.use_filesystem_tools:
             read_file, write_file, edit_file = create_filesystem_tools(resolved_runtime)
-            filesystem_tools = [read_file, write_file, edit_file]
+            glob_tool = create_glob_tool(resolved_runtime)
+            grep_tool = create_grep_tool(resolved_runtime)
+            filesystem_tools = [read_file, write_file, edit_file, glob_tool, grep_tool]
             tools.extend(filesystem_tools)
 
         if additional_tools:
