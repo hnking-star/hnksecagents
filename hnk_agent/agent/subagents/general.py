@@ -6,14 +6,14 @@
 
 from typing import Any
 
-from hnk_agent.agent.prompts import build_general_subagent_prompt
+from hnk_agent.agent.prompts import build_general_subagent_system_prompt
 
 def _build_general_system_prompt(
     max_iterations: int,
     tool_summary: str = "",
 ) -> str:
     """构建通用子代理的默认系统提示词。"""
-    return build_general_subagent_prompt(
+    return build_general_subagent_system_prompt(
         max_iterations=max_iterations,
         tool_summary=tool_summary,
     )

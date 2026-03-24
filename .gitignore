@@ -4,3 +4,4 @@ __pycache__/
 .idea/
 .langgraph_api/
 .DS_Store
+.env
