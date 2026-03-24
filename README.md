@@ -59,8 +59,8 @@ hnksecagents/
 如果你要从零开始：
 
 ```bash
-cd /Users/bytedance/Desktop/AI_hacker/tencent/hnksecagents
-python3.12 -m venv .venv
+cd hnksecagents
+python -m venv .venv
 source .venv/bin/activate
 pip install -e .
 ```
@@ -68,13 +68,19 @@ pip install -e .
 如果你已经有 `.venv`，只需要：
 
 ```bash
-cd /Users/bytedance/Desktop/AI_hacker/tencent/hnksecagents
+cd hnksecagents
 source .venv/bin/activate
 ```
 
 ## 环境变量
 
-项目通过 `.env` 读取模型配置，最小示例可参考：
+项目通过 `.env` 读取模型配置。先从示例复制一份：
+
+```bash
+cp .env.example .env
+```
+
+最小示例可参考：
 
 ```env
 HNKSECAGENTS_MODEL=gpt-4o-mini
