@@ -2,6 +2,8 @@
 
 __all__ = ["HNKAgent"]
 
+from hnk_agent.agent.agent import HNKAgent
+
 
 def __getattr__(name: str):
     """按需加载重量级对象，避免无关依赖在导入期就被拉起。"""

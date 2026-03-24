@@ -27,6 +27,8 @@ __all__ = [
     "create_deepagent_middleware",
 ]
 
+from hnk_agent.agent.middleware.deepagent_middleware import create_deepagent_middleware
+
 
 def __getattr__(name: str):
     """按需导入重依赖模块。"""

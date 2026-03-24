@@ -97,6 +97,7 @@ def create_chat_model(
     base_url: str | None = None,
     temperature: float | None = None,
     max_tokens: int | None = None,
+    user_agent: str | None = None,
     extra_parameters: dict[str, Any] | None = None,
 ) -> Any:
     """创建 LangChain 聊天模型实例。"""
@@ -113,6 +114,7 @@ def create_chat_model(
             "base_url": base_url,
             "temperature": temperature,
             "max_tokens": max_tokens,
+            "default_headers": {"User-Agent": user_agent} if user_agent else None,
         }
     )
 
@@ -145,6 +147,8 @@ def create_llm_from_env(
     temperature = _parse_float(get_env_str(f"{prefix}_TEMPERATURE"))
     max_tokens = _parse_int(get_env_str(f"{prefix}_MAX_TOKENS"))
 
+    user_agent = get_env_str(f"{prefix}_USER_AGENT")
+
     return create_chat_model(
         model_name=model_name,
         provider=provider,
@@ -152,6 +156,7 @@ def create_llm_from_env(
         base_url=base_url,
         temperature=temperature,
         max_tokens=max_tokens,
+        user_agent=user_agent,
     )
 
 
@@ -179,6 +184,7 @@ def create_llm_from_definition(
     parameters = dict(definition.parameters)
     temperature = parameters.pop("temperature", None)
     max_tokens = parameters.pop("max_tokens", None)
+    user_agent = parameters.pop("user_agent", None) or get_env_str(f"{env_prefix}_USER_AGENT")
 
     return create_chat_model(
         model_name=model_name,
@@ -187,6 +193,7 @@ def create_llm_from_definition(
         base_url=base_url,
         temperature=float(temperature) if temperature is not None else None,
         max_tokens=int(max_tokens) if max_tokens is not None else None,
+        user_agent=str(user_agent) if user_agent is not None else None,
         extra_parameters=parameters,
     )
 
