@@ -89,7 +89,7 @@ HNKSECAGENTS_MODEL_PROVIDER=openai
 # HNKSECAGENTS_BASE_URL=
 # HNKSECAGENTS_TEMPERATURE=0
 # HNKSECAGENTS_MAX_TOKENS=4096
-# HNKSECAGENTS_WORKSPACE_ROOT=/Users/bytedance/Desktop/AI_hacker/tencent/hnksecagents
+# HNKSECAGENTS_WORKSPACE_ROOT=your_local_directory
 ```
 
 默认会读取项目根目录下的 `.env`。
