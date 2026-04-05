@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 from pathlib import Path
 from typing import Any
 
 from hnk_agent.agent import HNKAgent
+from hnk_agent.agent.tools.mcp_tools import load_mcp_tools
 from hnk_agent.config import AgentConfig
 from hnk_agent.llm import create_llm_from_env, load_env_file
 
@@ -57,6 +59,14 @@ def _build_agent() -> Any:
     tool_registry = config.create_tool_registry()
     skill_sources = config.skills.local_skill_dirs(cwd=Path(workspace_root))
 
+    # 加载已启用的 MCP 安全工具（连接失败的 server 自动跳过，不影响启动）
+    mcp_tools: list[Any] = []
+    try:
+        mcp_tools = asyncio.run(load_mcp_tools())
+    except Exception as exc:
+        import structlog
+        structlog.get_logger(__name__).warning("mcp_tools_load_skipped", error=str(exc))
+
     builder = HNKAgent(
         model,
         runtime=runtime,
@@ -64,7 +74,7 @@ def _build_agent() -> Any:
         **config.to_agent_options(),
         skill_sources=skill_sources,
     )
-    return builder.create_langgraph_agent()
+    return builder.create_langgraph_agent(additional_tools=mcp_tools or None)
 
 
 if _agent is None:

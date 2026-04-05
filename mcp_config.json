@@ -1,0 +1,138 @@
+{
+  "_comment": "安全工具 MCP Server 配置文件。\n工具启动前请确保已安装对应依赖（Node.js 18+ / npx / uvx / docker）。\n带 REQUIRES_API_KEY 注释的 server 需要在 .env 中配置对应环境变量后才能启用。",
+
+  "mcpServers": {
+    "nmap": {
+      "_comment": "Nmap 网络扫描 / 端口探测 / 服务指纹 — 需要宿主机已安装 nmap",
+      "transport": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@hackrsatyamrastogi/pentesting-cyber-mcp",
+        "nmap"
+      ],
+      "env": {
+        "NMAP_PATH": "/usr/bin/nmap"
+      },
+      "enabled": false
+    },
+
+    "nuclei": {
+      "_comment": "Nuclei 模板漏洞扫描 (8000+ CVE/误配置模板) — 需要宿主机已安装 nuclei",
+      "transport": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@hackrsatyamrastogi/pentesting-cyber-mcp",
+        "nuclei"
+      ],
+      "env": {
+        "NUCLEI_PATH": "nuclei"
+      },
+      "enabled": false
+    },
+
+    "sqlmap": {
+      "_comment": "SQLMap SQL 注入自动化检测 — 需要宿主机已安装 sqlmap / python3 sqlmap",
+      "transport": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@hackrsatyamrastogi/pentesting-cyber-mcp",
+        "sqlmap"
+      ],
+      "env": {
+        "SQLMAP_PATH": "sqlmap"
+      },
+      "enabled": false
+    },
+
+    "ffuf": {
+      "_comment": "FFUF Web 模糊测试 — 目录/文件/参数/VHost 爆破，需要宿主机已安装 ffuf",
+      "transport": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@hackrsatyamrastogi/pentesting-cyber-mcp",
+        "ffuf"
+      ],
+      "env": {
+        "FFUF_PATH": "ffuf"
+      },
+      "enabled": false
+    },
+
+    "shodan": {
+      "_comment": "REQUIRES_API_KEY: SHODAN_API_KEY — 互联网资产测绘",
+      "transport": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@burttheocoder/mcp-shodan"
+      ],
+      "env": {
+        "SHODAN_API_KEY": "${SHODAN_API_KEY}"
+      },
+      "enabled": false
+    },
+
+    "virustotal": {
+      "_comment": "REQUIRES_API_KEY: VIRUSTOTAL_API_KEY — 文件/URL 恶意软件分析与威胁情报",
+      "transport": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@burttheocoder/mcp-virustotal"
+      ],
+      "env": {
+        "VIRUSTOTAL_API_KEY": "${VIRUSTOTAL_API_KEY}"
+      },
+      "enabled": false
+    },
+
+    "burpsuite": {
+      "_comment": "Burp Suite Pro MCP 集成 — 需要本地运行 Burp Suite 并开启 MCP 插件 (PortSwigger 官方)",
+      "transport": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@portswigger/mcp-server"
+      ],
+      "env": {
+        "BURP_REST_API_URL": "${BURP_REST_API_URL}"
+      },
+      "enabled": false
+    },
+
+    "semgrep": {
+      "_comment": "Semgrep 静态代码分析 (5000+ 规则) — 需要宿主机已安装 semgrep",
+      "transport": "stdio",
+      "command": "uvx",
+      "args": [
+        "semgrep-mcp"
+      ],
+      "enabled": false
+    },
+
+    "dnstwist": {
+      "_comment": "DNStwist 域名 Fuzzing / 钓鱼域名检测 — 需要宿主机已安装 dnstwist",
+      "transport": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@burttheocoder/mcp-dnstwist"
+      ],
+      "enabled": false
+    },
+
+    "trivy": {
+      "_comment": "Trivy 容器/IaC/文件系统漏洞扫描 — 需要宿主机已安装 trivy",
+      "transport": "stdio",
+      "command": "uvx",
+      "args": [
+        "trivy-mcp"
+      ],
+      "enabled": false
+    }
+  }
+}

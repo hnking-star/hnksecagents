@@ -12,6 +12,7 @@ from hnk_agent.agent.tools.file_ops import create_filesystem_tools
 from hnk_agent.agent.tools.glob import create_glob_tool
 from hnk_agent.agent.tools.grep import create_grep_tool
 from hnk_agent.agent.tools.http_ctf import create_ctf_http_tools
+from hnk_agent.agent.tools.mcp_tools import load_mcp_tools
 
 __all__ = [
     "create_execute_bash_tool",
@@ -20,6 +21,7 @@ __all__ = [
     "create_glob_tool",
     "create_grep_tool",
     "create_ctf_http_tools",
+    "load_mcp_tools",
     "get_all_tools",
 ]
 
