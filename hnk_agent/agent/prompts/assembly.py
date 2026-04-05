@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from hnk_agent.agent.prompts.general_subagent import build_general_subagent_prompt
-from hnk_agent.agent.prompts.main_agent import build_main_agent_prompt
+from hnk_agent.agent.prompts.loader import get_loader
 
 
 def build_main_agent_system_prompt(
@@ -13,10 +12,10 @@ def build_main_agent_system_prompt(
     system_prompt_suffix: str | None = None,
 ) -> str:
     """统一构建主代理 system prompt。"""
-    return build_main_agent_prompt(
+    return get_loader().get_system_prompt(
         tool_summary=tool_summary,
         subagent_summary=subagent_summary,
-        system_prompt_suffix=system_prompt_suffix,
+        runtime_context=system_prompt_suffix,
     )
 
 
@@ -24,9 +23,12 @@ def build_general_subagent_system_prompt(
     *,
     max_iterations: int,
     tool_summary: str = "",
+    system_prompt_suffix: str | None = None,
 ) -> str:
     """统一构建通用子代理 system prompt。"""
-    return build_general_subagent_prompt(
+    return get_loader().get_subagent_prompt(
+        "general",
         max_iterations=max_iterations,
         tool_summary=tool_summary,
+        runtime_context=system_prompt_suffix,
     )
