@@ -33,7 +33,7 @@ def _get_env_str(name: str, default: str | None = None) -> str | None:
 
 
 def _build_agent() -> Any:
-    """构建供 langgraph dev 直接加载的原生 agent。"""
+    """构建供 langgraph dev 直接加载的原生 graph agent。"""
     _load_project_env()
 
     repo_root = _project_root()

@@ -57,6 +57,18 @@ def create_execute_bash_tool(runtime: Any) -> BaseTool:
         if runtime is None:
             return "ERROR: Runtime not initialized"
 
+        # 安全 fallback：如果 working_dir 是相对路径且不存在，退回到系统 /tmp
+        import os as _os
+        if working_dir is not None:
+            _wd = working_dir.strip()
+            if _wd and not _wd.startswith("/") and not _os.path.isdir(_wd):
+                logger.warning(
+                    "bash_working_dir_fallback",
+                    original=working_dir,
+                    fallback="/tmp",
+                )
+                working_dir = "/tmp"
+
         try:
             logger.info(
                 "executing_bash_command",

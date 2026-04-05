@@ -11,6 +11,7 @@ from hnk_agent.agent.tools.code_execution import create_execute_code_tool
 from hnk_agent.agent.tools.file_ops import create_filesystem_tools
 from hnk_agent.agent.tools.glob import create_glob_tool
 from hnk_agent.agent.tools.grep import create_grep_tool
+from hnk_agent.agent.tools.http_ctf import create_ctf_http_tools
 
 __all__ = [
     "create_execute_bash_tool",
@@ -18,6 +19,7 @@ __all__ = [
     "create_filesystem_tools",
     "create_glob_tool",
     "create_grep_tool",
+    "create_ctf_http_tools",
     "get_all_tools",
 ]
 
@@ -28,6 +30,8 @@ def get_all_tools(runtime: Any, tool_registry: Any | None = None) -> list[BaseTo
     glob_tool = create_glob_tool(runtime)
     grep_tool = create_grep_tool(runtime)
 
+    normalize_url_tool, http_request_tool, http_probe_tool, extract_flags_tool = create_ctf_http_tools()
+
     return [
         create_execute_code_tool(runtime, tool_registry=tool_registry),
         create_execute_bash_tool(runtime),
@@ -36,4 +40,8 @@ def get_all_tools(runtime: Any, tool_registry: Any | None = None) -> list[BaseTo
         read_file,
         write_file,
         edit_file,
+        normalize_url_tool,
+        http_request_tool,
+        http_probe_tool,
+        extract_flags_tool,
     ]
