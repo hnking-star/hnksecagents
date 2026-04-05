@@ -11,6 +11,7 @@ from hnk_agent.agent.prompts import (
     build_main_agent_system_prompt,
 )
 from hnk_agent.agent.tools import (
+    create_ctf_http_tools,
     create_execute_bash_tool,
     create_execute_code_tool,
     create_filesystem_tools,
@@ -148,6 +149,8 @@ class HNKAgent:
         bash_tool = create_execute_bash_tool(resolved_runtime)
 
         tools: list[Any] = [execute_code_tool, bash_tool]
+        normalize_url_tool, http_request_tool, http_probe_tool, extract_flags_tool = create_ctf_http_tools()
+        tools.extend([normalize_url_tool, http_request_tool, http_probe_tool, extract_flags_tool])
 
         filesystem_tools: list[Any] = []
         if self.use_filesystem_tools:
